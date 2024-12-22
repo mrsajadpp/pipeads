@@ -15,7 +15,7 @@ const adSchema = new mongoose.Schema({
     email: String,
     start_date: Date,
     end_date: Date,
-    play_count: Number,
+    play_count: { type: Number, default: 0 },
     daily_play_limit: Number,
     daily_played: { type: Number, default: 0 },
     amount: Number
@@ -31,7 +31,7 @@ const binAdSchema = new mongoose.Schema({
     email: String,
     start_date: Date,
     end_date: Date,
-    play_count: Number,
+    play_count: { type: Number, default: 0 },
     daily_play_limit: Number,
     daily_played: { type: Number, default: 0 },
     amount: Number
@@ -111,13 +111,23 @@ app.delete('/ads', async (req, res) => {
 });
 
 // Route to stream video based on category
+// Need to fix bug
 app.get('/stream', async (req, res) => {
     try {
         const category = req.query.category;
-        
+        const ad = await Ad.findOne({ category, daily_played: { $lt: daily_play_limit } }).sort({ start_date: 1 });
+
+        if (!ad) {
+            return res.status(404).send({ error: 'No ads available for streaming' });
+        }
+
+        ad.daily_played += 1;
+        ad.play_count += 1;
+        await ad.save();
+ 
+        res.render('stream', { ad });
     } catch (error) {
         console.error(error);
-        
         res.status(500).send({ error: 'Failed to stream video' });
     }
 });
