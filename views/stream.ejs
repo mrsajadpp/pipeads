@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Stream</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: black;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+    </style>
+</head>
+
+<body>
+    <video controls autoplay>
+        <source src="<%= ad.src %>" type="video/mp4">
+        Your browser does not support the video tag.
+    </video>
+    <script>
+        const category = '<%= ad.category %>';
+        const nextAd = () => {
+            fetch(`/stream?category=${category}`)
+                .then(response => response.text())
+                .then(html => {
+                    console.log(html);
+
+                    document.body.innerHTML = html;
+                });
+        };
+
+        document.querySelector('video').addEventListener('ended', nextAd);
+    </script>
+</body>
+
+</html>

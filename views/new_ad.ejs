@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Insert New Ad</title>
+</head>
+<body>
+  <h1>Insert New Ad</h1>
+  <form action="/ads" method="POST">
+    <label for="category">Category:</label>
+    <input type="text" id="category" name="category" required><br><br>
+    <label for="src">Video Source URL:</label>
+    <input type="text" id="src" name="src" required><br><br>
+    <label for="advertiser">Advertiser:</label>
+    <input type="text" id="advertiser" name="advertiser" required><br><br>
+    <label for="email">Advertiser Email:</label>
+    <input type="email" id="email" name="email" required><br><br>
+    <label for="start_date">Start Date:</label>
+    <input type="date" id="start_date" name="start_date" required><br><br>
+    <label for="end_date">End Date:</label>
+    <input type="date" id="end_date" name="end_date" required><br><br>
+    <label for="daily_play_limit">Daily Play Limit:</label>
+    <input type="number" id="daily_play_limit" name="daily_play_limit" required><br><br>
+    <label for="amount">Amount (INR):</label>
+    <input type="number" id="amount" name="amount" readonly><br><br>
+    <button type="submit">Insert Ad</button>
+  </form>
+  <script>
+    const startDateInput = document.getElementById('start_date');
+    const endDateInput = document.getElementById('end_date');
+    const dailyPlayLimitInput = document.getElementById('daily_play_limit');
+    const amountInput = document.getElementById('amount');
+
+    const calculateAmount = () => {
+      const startDate = new Date(startDateInput.value);
+      const endDate = new Date(endDateInput.value);
+      const dailyPlayLimit = parseInt(dailyPlayLimitInput.value, 10);
+
+      if (startDate && endDate && dailyPlayLimit) {
+        const dayLength = (endDate - startDate) / (1000 * 60 * 60 * 24);
+        const totalPlays = dailyPlayLimit * dayLength;
+        const amount = totalPlays * 0.5; // Assuming 0.5 INR per play
+        amountInput.value = amount.toFixed(2);
+      }
+    };
+
+    startDateInput.addEventListener('change', calculateAmount);
+    endDateInput.addEventListener('change', calculateAmount);
+    dailyPlayLimitInput.addEventListener('input', calculateAmount);
+  </script>
+</body>
+</html>
