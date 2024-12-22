@@ -165,7 +165,7 @@ app.get('/stream', async (req, res) => {
             );
 
             if (adToPlay) {
-                res.render('stream', { ad: adToPlay });
+                res.render('stream', { ad: adToPlay }); 
             } else {
                 res.status(404).send('No ads available for playing at this time');
             }
