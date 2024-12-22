@@ -17,6 +17,7 @@ const adSchema = new mongoose.Schema({
     end_date: Date,
     play_count: Number,
     daily_play_limit: Number,
+    daily_played: { type: Number, default: 0 },
     amount: Number
 });
 
@@ -32,6 +33,7 @@ const binAdSchema = new mongoose.Schema({
     end_date: Date,
     play_count: Number,
     daily_play_limit: Number,
+    daily_played: { type: Number, default: 0 },
     amount: Number
 });
 
@@ -112,66 +114,7 @@ app.delete('/ads', async (req, res) => {
 app.get('/stream', async (req, res) => {
     try {
         const category = req.query.category;
-        const currentDate = new Date().toISOString().split('T')[0]; // Get current date in YYYY-MM-DD format
-
-        const ads = await Ad.find({ category, start_date: { $lte: currentDate }, end_date: { $gte: currentDate } }).sort({ play_count: 1 });
-
-        const totalPlayCountLeft = ads.reduce((sum, ad) => {
-            const pastDays = Math.floor((new Date(currentDate) - new Date(ad.start_date)) / (1000 * 60 * 60 * 24));
-            const adjustedDailyLimit = ad.daily_play_limit * (pastDays + 1); // Include today
-            return sum + (adjustedDailyLimit - ad.play_count);
-        }, 0);
-
-        console.log(totalPlayCountLeft);
         
-
-        if (totalPlayCountLeft > 0) {
-            // Get the current date at midnight for accurate daily count comparison
-            const todayStart = new Date();
-            todayStart.setHours(0, 0, 0, 0);
-
-            // Find an ad that hasn't reached its daily limit
-            const adToPlay = await Ad.findOneAndUpdate(
-                {
-                    category,
-                    start_date: { $lte: currentDate },
-                    end_date: { $gte: currentDate },
-                    $expr: {
-                        $lt: [
-                            {
-                                $subtract: [
-                                    "$play_count",
-                                    {
-                                        $multiply: [
-                                            "$daily_play_limit",
-                                            {
-                                                $floor: {
-                                                    $divide: [
-                                                        { $subtract: [new Date(), "$start_date"] },
-                                                        1000 * 60 * 60 * 24 // milliseconds in a day
-                                                    ]
-                                                }
-                                            }
-                                        ]
-                                    }
-                                ]
-                            },
-                            "$daily_play_limit"
-                        ]
-                    }
-                },
-                { $inc: { play_count: 1 } },
-                { sort: { play_count: 1 }, new: true }
-            );
-
-            if (adToPlay) {
-                res.render('stream', { ad: adToPlay }); 
-            } else {
-                res.status(404).send('No ads available for playing at this time');
-            }
-        } else {
-            res.status(404).send('No ads available for playing at this time');
-        }
     } catch (error) {
         console.error(error);
         
@@ -187,6 +130,16 @@ cron.schedule('0 0 * * *', async () => {
         await BinAd.insertMany(expiredAds);
         await Ad.deleteMany({ end_date: { $lt: currentDate } });
         console.log('Scheduled job: Moved expired ads to bin');
+    } catch (error) {
+        console.error('Scheduled job failed:', error);
+    }
+});
+
+// Schedule job to reset daily_played to zero at 1 AM daily
+cron.schedule('0 1 * * *', async () => {
+    try {
+        await Ad.updateMany({}, { $set: { daily_played: 0 } });
+        console.log('Scheduled job: Reset daily_played to zero');
     } catch (error) {
         console.error('Scheduled job failed:', error);
     }
