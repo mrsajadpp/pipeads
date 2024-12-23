@@ -23,16 +23,17 @@
             width: 100%;
             height: 100%;
             object-fit: cover;
+            position: relative;
         }
     </style>
     <!-- <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script> -->
 </head>
 
 <body>
-    <video id="videoPlayer" autoplay>
+    <video id="videoPlayer">
         <source id="videoSource" src="<%= ad.src %>" type="video/mp4" />
     </video>
-    <button onclick="videoPlayer.play();" style="display: none;" id="play_btn">play</button>
+    <button onclick="videoPlayer.play();" style="opacity: 0;" id="play_btn">play</button>
     <!-- <script>
         var myFP = fluidPlayer(
             'videoPlayer', {
