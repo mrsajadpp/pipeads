@@ -25,17 +25,49 @@
             object-fit: cover;
         }
     </style>
+    <!-- <script src="https://cdn.fluidplayer.com/v3/current/fluidplayer.min.js"></script> -->
 </head>
 
 <body>
     <video id="videoPlayer" autoplay>
-        <source id="videoSource" src="<%= ad.src %>" type="video/mp4">
-        Your browser does not support the video tag.
+        <source id="videoSource" src="<%= ad.src %>" type="video/mp4" />
     </video>
+    <button onclick="videoPlayer.play();" style="display: none;" id="play_btn">play</button>
+    <!-- <script>
+        var myFP = fluidPlayer(
+            'videoPlayer', {
+            "layoutControls": {
+                "controlBar": {
+                    "autoHideTimeout": 1,
+                    "animated": false,
+                    "autoHide": true
+                },
+                "htmlOnPauseBlock": {
+                    "html": null,
+                    "height": null,
+                    "width": null
+                },
+                "autoPlay": true,
+                "mute": false,
+                "allowTheatre": false,
+                "playPauseAnimation": false,
+                "playbackRateEnabled": false,
+                "allowDownload": false,
+                "playButtonShowing": false,
+                "fillToContainer": false,
+                "posterImage": ""
+            },
+            "vastOptions": {
+                "adList": [],
+                "adCTAText": false,
+                "adCTATextPosition": ""
+            }
+        });
+    </script> -->
 
     <script>
         const videoPlayer = document.getElementById('videoPlayer');
-        const videoSource = document.getElementById('videoSource');
+        
         videoPlayer.addEventListener('ended', () => {
             window.location.reload();
         });

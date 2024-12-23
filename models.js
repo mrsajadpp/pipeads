@@ -16,7 +16,7 @@ const adSchema = new mongoose.Schema({
         publisher: { type: mongoose.Schema.Types.ObjectId, ref: 'Publisher' },
         daily_played: { type: Number, default: 0 }
     }]
-});
+}); 
 
 const Ad = mongoose.model('Ad', adSchema);
 
