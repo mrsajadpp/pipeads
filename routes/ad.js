@@ -149,9 +149,6 @@ router.get('/stream/:publisherId', async (req, res) => {
             publisher.save()
         ]);
 
-        console.log('todayPlays', todayPlays);
-        console.log('dailyPlayLimit', ad.per_day_budget);
-
         res.render('stream', { ad, publisher });
     } catch (error) {
         console.error(error);
