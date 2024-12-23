@@ -61,6 +61,9 @@
 <body>
     <div class="container">
         <h1>Advertiser Dashboard</h1>
+        <% if (error) { %>
+            <div class="error"><%= error %></div>
+        <% } %>
         <a href="/ads/new" class="new-ad-button">New Ad</a>
         <div class="grid">
             <% ads.forEach(ad => { %>

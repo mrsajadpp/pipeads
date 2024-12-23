@@ -46,6 +46,9 @@
 <body>
     <div class="container">
         <h1>Publisher Dashboard</h1>
+        <% if (error) { %>
+            <div class="error"><%= error %></div>
+        <% } %>
         <div class="grid">
             <div class="card">
                 <h3>Monthly Earnings</h3>

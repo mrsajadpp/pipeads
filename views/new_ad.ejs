@@ -7,6 +7,9 @@
 </head>
 <body>
   <h1>Insert New Ad</h1>
+  <% if (error) { %>
+    <div class="error"><%= error %></div>
+  <% } %>
   <form action="/ads" method="POST">
     <label for="category">Category:</label>
     <select id="category" name="category" required>
