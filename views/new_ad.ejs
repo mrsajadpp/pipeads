@@ -9,13 +9,21 @@
   <h1>Insert New Ad</h1>
   <form action="/ads" method="POST">
     <label for="category">Category:</label>
-    <input type="text" id="category" name="category" required><br><br>
+    <select id="category" name="category" required>
+      <option value="Technology">Technology</option>
+      <option value="Health">Health</option>
+      <option value="Finance">Finance</option>
+      <option value="Education">Education</option>
+      <option value="Entertainment">Entertainment</option>
+    </select><br><br>
     <label for="src">Video Source URL:</label>
     <input type="text" id="src" name="src" required><br><br>
     <label for="advertiser">Advertiser:</label>
-    <input type="text" id="advertiser" name="advertiser" required><br><br>
-    <label for="email">Advertiser Email:</label>
-    <input type="email" id="email" name="email" required><br><br>
+    <select id="advertiser" name="advertiser" required>
+      <% advertisers.forEach(advertiser => { %>
+        <option value="<%= advertiser.name %>"><%= advertiser.name %></option>
+      <% }) %>
+    </select><br><br>
     <label for="start_date">Start Date:</label>
     <input type="date" id="start_date" name="start_date" required><br><br>
     <label for="end_date">End Date:</label>

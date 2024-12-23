@@ -24,23 +24,51 @@
             height: 100%;
             object-fit: cover;
         }
+
+        .info {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 
 <body>
+    <div class="info">
+        Plays left today: <%= playsLeft %>
+    </div>
     <video controls autoplay>
         <source src="<%= ad.src %>" type="video/mp4">
         Your browser does not support the video tag.
     </video>
     <script>
         const category = '<%= ad.category %>';
-        const nextAd = () => {
-            fetch(`/stream?category=${category}`)
-                .then(response => response.text())
-                .then(html => {
-                    console.log(html);
+        const publisherId = '<%= publisher._id %>';
+        const playsLeft = '<%= playsLeft %>';
 
+        const nextAd = () => {
+            if (playsLeft <= 1) {
+                document.body.innerHTML = '<h1>Daily limit reached. Please try again tomorrow.</h1>';
+                return;
+            }
+
+            fetch(`/stream/${publisherId}?category=${category}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Daily limit reached');
+                    }
+                    return response.text();
+                })
+                .then(html => {
                     document.body.innerHTML = html;
+                })
+                .catch(error => {
+                    console.log('Playback stopped:', error.message);
+                    document.body.innerHTML = '<h1>Daily limit reached. Please try again tomorrow.</h1>';
                 });
         };
 
