@@ -1,5 +1,7 @@
 const express = require('express');
 const cron = require('node-cron');
+const bcrypt = require('bcrypt');
+const session = require('express-session');
 const { connectDB } = require('./db');
 const { Ad, BinAd, Publisher, Advertiser } = require('./models');
 const { default: mongoose } = require('mongoose');
@@ -18,50 +20,170 @@ app.use(express.urlencoded({ extended: true }));
 // Set view engine to EJS
 app.set('view engine', 'ejs');
 
-// Route to render form for creating publisher account
-app.get('/publishers/new', (req, res) => {
+// Session middleware
+app.use(session({
+    secret: 'your_secret_key',
+    resave: false,
+    saveUninitialized: true,
+    cookie: { secure: false } // Set to true if using HTTPS
+}));
+
+// Middleware to check if advertiser is logged in
+function checkAdvertiserAuth(req, res, next) {
+    if (req.session.userId && req.session.userType === 'advertiser') {
+        return next();
+    } else {
+        res.redirect('/advertisers/login');
+    }
+}
+
+// Middleware to check if publisher is logged in
+function checkPublisherAuth(req, res, next) {
+    if (req.session.userId && req.session.userType === 'publisher') {
+        return next();
+    } else {
+        res.redirect('/publishers/login');
+    }
+}
+
+// Middleware to prevent logged-in advertisers from accessing login/signup pages
+function preventAdvertiserAuth(req, res, next) {
+    if (req.session.userId && req.session.userType === 'advertiser') {
+        res.redirect('/advertisers/dashboard');
+    } else {
+        next();
+    }
+}
+
+// Middleware to prevent logged-in publishers from accessing login/signup pages
+function preventPublisherAuth(req, res, next) {
+    if (req.session.userId && req.session.userType === 'publisher') {
+        res.redirect('/publishers/dashboard');
+    } else {
+        next();
+    }
+}
+
+// Route to render login form for advertisers
+app.get('/advertisers/login', preventAdvertiserAuth, (req, res) => {
+    res.render('login_advertiser');
+});
+
+// Route to handle advertiser login
+app.post('/advertisers/login', async (req, res) => {
+    const { email, password } = req.body;
     try {
-        res.render('new_publisher');
+        const advertiser = await Advertiser.findOne({ email });
+        if (!advertiser) {
+            return res.status(404).send({ error: 'Advertiser not found' });
+        }
+        const isMatch = await bcrypt.compare(password, advertiser.password);
+        if (!isMatch) {
+            return res.status(400).send({ error: 'Invalid credentials' });
+        }
+        req.session.userId = advertiser._id;
+        req.session.userType = 'advertiser';
+        res.redirect('/advertisers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to load form' });
+        res.status(500).send({ error: 'Failed to login advertiser' });
     }
 });
 
-// Route to create a new publisher account
-app.post('/publishers', async (req, res) => {
+// Route to render login form for publishers
+app.get('/publishers/login', preventPublisherAuth, (req, res) => {
+    res.render('login_publisher');
+});
+
+// Route to handle publisher login
+app.post('/publishers/login', async (req, res) => {
+    const { email, password } = req.body;
     try {
-        const { name, email, category } = req.body; // Removed website
-        const publisher = new Publisher({ name, email, category: category.toLowerCase() }); // Removed website
-        await publisher.save();
-        res.status(201).send(publisher);
+        const publisher = await Publisher.findOne({ email });
+        if (!publisher) {
+            return res.status(404).send({ error: 'Publisher not found' });
+        }
+        const isMatch = await bcrypt.compare(password, publisher.password);
+        if (!isMatch) {
+            return res.status(400).send({ error: 'Invalid credentials' });
+        }
+        req.session.userId = publisher._id;
+        req.session.userType = 'publisher';
+        res.redirect('/publishers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to create publisher account' });
+        res.status(500).send({ error: 'Failed to login publisher' });
     }
 });
 
-// Route to render form for creating advertiser account
-app.get('/advertisers/new', (req, res) => {
-    try {
-        res.render('new_advertiser');
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to load form' });
-    }
+// Route to render signup form for advertisers
+app.get('/advertisers/signup', preventAdvertiserAuth, (req, res) => {
+    res.render('signup_advertiser');
 });
 
 // Route to create a new advertiser account
-app.post('/advertisers', async (req, res) => {
+app.post('/advertisers/signup', async (req, res) => {
     try {
-        const { name, email, company } = req.body;
-        const advertiser = new Advertiser({ name, email, company });
+        const { name, email, password, company } = req.body;
+        const existingAdvertiser = await Advertiser.findOne({ email });
+        if (existingAdvertiser) {
+            return res.status(400).send({ error: 'Advertiser already exists' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const advertiser = new Advertiser({ name, email, password: hashedPassword, company });
         await advertiser.save();
-        res.status(201).send(advertiser);
+        req.session.userId = advertiser._id;
+        req.session.userType = 'advertiser';
+        res.redirect('/advertisers/dashboard');
     } catch (error) {
         res.status(500).send({ error: 'Failed to create advertiser account' });
     }
 });
 
+// Route to render signup form for publishers
+app.get('/publishers/signup', preventPublisherAuth, (req, res) => {
+    res.render('signup_publisher');
+});
+
+// Route to create a new publisher account
+app.post('/publishers/signup', async (req, res) => {
+    try {
+        const { name, email, password, category } = req.body;
+        const existingPublisher = await Publisher.findOne({ email });
+        if (existingPublisher) {
+            return res.status(400).send({ error: 'Publisher already exists' });
+        }
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const publisher = new Publisher({ name, email, password: hashedPassword, category: category.toLowerCase() });
+        await publisher.save();
+        req.session.userId = publisher._id;
+        req.session.userType = 'publisher';
+        res.redirect('/publishers/dashboard');
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to create publisher account' });
+    }
+});
+
+// Route to render advertiser dashboard
+app.get('/advertisers/dashboard', checkAdvertiserAuth, async (req, res) => {
+    try {
+        const ads = await Ad.find({ advertiser: req.session.userId });
+        res.render('advertiser_dashboard', { ads });
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to load dashboard' });
+    }
+});
+
+// Route to render publisher dashboard
+app.get('/publishers/dashboard', checkPublisherAuth, async (req, res) => {
+    try {
+        const publisher = await Publisher.findById(req.session.userId);
+        res.render('publisher_dashboard', { publisher });
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to load dashboard' });
+    }
+});
+
 // Route to render form for inserting ads with advertiser list
-app.get('/ads/new', async (req, res) => {
+app.get('/ads/new', checkAdvertiserAuth, async (req, res) => {
     try {
         const advertisers = await Advertiser.find();
         res.render('new_ad', { advertisers });
