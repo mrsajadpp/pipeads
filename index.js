@@ -137,14 +137,47 @@ app.get('/stream/:publisherId', async (req, res) => {
         if (!publisher) {
             return res.status(404).send({ error: 'Publisher not found' });
         }
-        
 
+        const ads = await Ad.find({
+            start_date: { $lte: currentDate },
+            end_date: { $gte: currentDate },
+            remaining_amount: { $gte: mongoose.Types.Decimal128.fromString("0") }
+        });
+
+        if (!ads.length) {
+            return res.status(404).send({ error: 'No ad available for streaming' });
+        }
+
+        const ad = ads[Math.floor(Math.random() * ads.length)];
+
+        const dailyPlayLimit = ad.per_day_budget / ad.per_play_amount;
+        const totalDailyPlays = ad.publisher_plays.reduce((sum, play) => sum + play.daily_played, 0);
+
+        if (totalDailyPlays >= dailyPlayLimit) {
+            return res.status(403).send({ error: 'Daily play limit exceeded' });
+        }
+
+        ad.play_count += 1;
+        ad.remaining_amount -= ad.per_play_amount;
+
+        const publisherPlay = ad.publisher_plays.find(play => play.publisher.toString() === publisherId);
+        if (publisherPlay) {
+            publisherPlay.daily_played += 1;
+        } else {
+            ad.publisher_plays.push({ publisher: publisherId, daily_played: 1 });
+        }
+
+        publisher.monthly_earnings += ad.per_play_amount;
+
+        await ad.save();
+        await publisher.save();
+
+        res.render('stream', { ad, publisher });
     } catch (error) {
         console.error(error);
         res.status(500).send({ error: 'Failed to stream video' });
     }
 });
-
 
 // Schedule job to run every 24 hours to move expired ads to bin
 cron.schedule('0 0 * * *', async () => {

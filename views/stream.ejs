@@ -24,47 +24,30 @@
             height: 100%;
             object-fit: cover;
         }
-
-        .info {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 10px;
-            border-radius: 5px;
-        }
     </style>
 </head>
 
 <body>
-    <div class="info">
-        Plays left today: <%= playsLeft %>
-    </div>
-    <video controls autoplay>
-        <source src="<%= ad.src %>" type="video/mp4">
+    <video id="videoPlayer" controls autoplay>
+        <source id="videoSource" src="<%= ad.src %>" type="video/mp4">
         Your browser does not support the video tag.
     </video>
     <script>
-        const category = '<%= ad.category %>';
+        const videoPlayer = document.getElementById('videoPlayer');
+        const videoSource = document.getElementById('videoSource');
         const publisherId = '<%= publisher._id %>';
-        const playsLeft = '<%= playsLeft %>';
 
-        const nextAd = () => {
-            if (playsLeft <= 1) {
-                document.body.innerHTML = '<h1>Daily limit reached. Please try again tomorrow.</h1>';
-                return;
-            }
-
-            fetch(`/stream/${publisherId}?category=${category}`)
+        const fetchNextAd = () => {
+            fetch(`/stream/${publisherId}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Daily limit reached');
                     }
-                    return response.text();
+                    return response.json();
                 })
-                .then(html => {
-                    document.body.innerHTML = html;
+                .then(data => {
+                    videoSource.src = data.ad.src;
+                    videoPlayer.load();
                 })
                 .catch(error => {
                     console.log('Playback stopped:', error.message);
@@ -72,7 +55,7 @@
                 });
         };
 
-        document.querySelector('video').addEventListener('ended', nextAd);
+        videoPlayer.addEventListener('ended', fetchNextAd);
     </script>
 </body>
 
