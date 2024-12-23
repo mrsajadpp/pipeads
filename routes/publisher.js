@@ -25,7 +25,7 @@ function preventPublisherAuth(req, res, next) {
 
 // Route to render login form for publishers
 router.get('/login', preventPublisherAuth, (req, res) => {
-    res.render('login_publisher');
+    res.render('login_publisher', { error: null });
 });
 
 // Route to handle publisher login
@@ -34,23 +34,23 @@ router.post('/login', async (req, res) => {
     try {
         const publisher = await Publisher.findOne({ email });
         if (!publisher) {
-            return res.status(404).send({ error: 'Publisher not found' });
+            return res.render('login_publisher', { error: 'Publisher not found' });
         }
         const isMatch = await bcrypt.compare(password, publisher.password);
         if (!isMatch) {
-            return res.status(400).send({ error: 'Invalid credentials' });
+            return res.render('login_publisher', { error: 'Invalid credentials' });
         }
         req.session.userId = publisher._id;
         req.session.userType = 'publisher';
         res.redirect('/publishers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to login publisher' });
+        res.render('login_publisher', { error: 'Failed to login publisher' });
     }
 });
 
 // Route to render signup form for publishers
 router.get('/signup', preventPublisherAuth, (req, res) => {
-    res.render('signup_publisher');
+    res.render('signup_publisher', { error: null });
 });
 
 // Route to create a new publisher account
@@ -59,7 +59,7 @@ router.post('/signup', async (req, res) => {
         const { name, email, password, category } = req.body;
         const existingPublisher = await Publisher.findOne({ email });
         if (existingPublisher) {
-            return res.status(400).send({ error: 'Publisher already exists' });
+            return res.render('signup_publisher', { error: 'Publisher already exists' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const publisher = new Publisher({ name, email, password: hashedPassword, category: category.toLowerCase() });
@@ -68,7 +68,7 @@ router.post('/signup', async (req, res) => {
         req.session.userType = 'publisher';
         res.redirect('/publishers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to create publisher account' });
+        res.render('signup_publisher', { error: 'Failed to create publisher account' });
     }
 });
 
@@ -76,9 +76,9 @@ router.post('/signup', async (req, res) => {
 router.get('/dashboard', checkPublisherAuth, async (req, res) => {
     try {
         const publisher = await Publisher.findById(req.session.userId);
-        res.render('publisher_dashboard', { publisher });
+        res.render('publisher_dashboard', { publisher, error: null });
     } catch (error) {
-        res.status(500).send({ error: 'Failed to load dashboard' });
+        res.render('publisher_dashboard', { publisher: null, error: 'Failed to load dashboard' });
     }
 });
 

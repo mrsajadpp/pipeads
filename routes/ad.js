@@ -15,7 +15,7 @@ function checkAdvertiserAuth(req, res, next) {
 
 // Route to render form for inserting ads
 router.get('/new', checkAdvertiserAuth, (req, res) => {
-    res.render('new_ad');
+    res.render('new_ad', { error: null });
 });
 
 // Route to insert a new ad
@@ -25,22 +25,22 @@ router.post('/', checkAdvertiserAuth, async (req, res) => {
         const advertiser = req.session.userId;
 
         if (!category) {
-            return res.status(400).send({ error: 'Category is required' });
+            return res.render('new_ad', { error: 'Category is required' });
         }
         if (!src) {
-            return res.status(400).send({ error: 'Video Source URL is required' });
+            return res.render('new_ad', { error: 'Video Source URL is required' });
         }
         if (!start_date) {
-            return res.status(400).send({ error: 'Start Date is required' });
+            return res.render('new_ad', { error: 'Start Date is required' });
         }
         if (!end_date) {
-            return res.status(400).send({ error: 'End Date is required' });
+            return res.render('new_ad', { error: 'End Date is required' });
         }
         if (!per_day_budget) {
-            return res.status(400).send({ error: 'Per Day Budget is required' });
+            return res.render('new_ad', { error: 'Per Day Budget is required' });
         }
         if (!per_play_amount) {
-            return res.status(400).send({ error: 'Per Play Amount is required' });
+            return res.render('new_ad', { error: 'Per Play Amount is required' });
         }
 
         const dayLength = (new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24);
@@ -66,7 +66,7 @@ router.post('/', checkAdvertiserAuth, async (req, res) => {
         await ad.save();
         res.status(201).send(ad);
     } catch (error) {
-        res.status(500).send({ error: 'Failed to insert ad' });
+        res.render('new_ad', { error: 'Failed to insert ad' });
     }
 });
 

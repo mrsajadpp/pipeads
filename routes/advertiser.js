@@ -26,7 +26,7 @@ function preventAdvertiserAuth(req, res, next) {
 
 // Route to render login form for advertisers
 router.get('/login', preventAdvertiserAuth, (req, res) => {
-    res.render('login_advertiser');
+    res.render('login_advertiser', { error: null });
 });
 
 // Route to handle advertiser login
@@ -35,23 +35,23 @@ router.post('/login', async (req, res) => {
     try {
         const advertiser = await Advertiser.findOne({ email });
         if (!advertiser) {
-            return res.status(404).send({ error: 'Advertiser not found' });
+            return res.render('login_advertiser', { error: 'Advertiser not found' });
         }
         const isMatch = await bcrypt.compare(password, advertiser.password);
         if (!isMatch) {
-            return res.status(400).send({ error: 'Invalid credentials' });
+            return res.render('login_advertiser', { error: 'Invalid credentials' });
         }
         req.session.userId = advertiser._id;
         req.session.userType = 'advertiser';
         res.redirect('/advertisers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to login advertiser' });
+        res.render('login_advertiser', { error: 'Failed to login advertiser' });
     }
 });
 
 // Route to render signup form for advertisers
 router.get('/signup', preventAdvertiserAuth, (req, res) => {
-    res.render('signup_advertiser');
+    res.render('signup_advertiser', { error: null });
 });
 
 // Route to create a new advertiser account
@@ -60,7 +60,7 @@ router.post('/signup', async (req, res) => {
         const { name, email, password, company } = req.body;
         const existingAdvertiser = await Advertiser.findOne({ email });
         if (existingAdvertiser) {
-            return res.status(400).send({ error: 'Advertiser already exists' });
+            return res.render('signup_advertiser', { error: 'Advertiser already exists' });
         }
         const hashedPassword = await bcrypt.hash(password, 10);
         const advertiser = new Advertiser({ name, email, password: hashedPassword, company });
@@ -69,7 +69,7 @@ router.post('/signup', async (req, res) => {
         req.session.userType = 'advertiser';
         res.redirect('/advertisers/dashboard');
     } catch (error) {
-        res.status(500).send({ error: 'Failed to create advertiser account' });
+        res.render('signup_advertiser', { error: 'Failed to create advertiser account' });
     }
 });
 
@@ -78,9 +78,9 @@ router.get('/dashboard', checkAdvertiserAuth, async (req, res) => {
     try {
         const ads = await Ad.find({ advertiser: new mongoose.Types.ObjectId(req.session.userId) });
         const binAds = await BinAd.find({ advertiser: new mongoose.Types.ObjectId(req.session.userId) });
-        res.render('advertiser_dashboard', { ads, binAds });
+        res.render('advertiser_dashboard', { ads, binAds, error: null });
     } catch (error) {
-        res.status(500).send({ error: 'Failed to load dashboard' });
+        res.render('advertiser_dashboard', { ads: [], binAds: [], error: 'Failed to load dashboard' });
     }
 });
 
