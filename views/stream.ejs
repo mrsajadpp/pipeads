@@ -28,34 +28,17 @@
 </head>
 
 <body>
-    <video id="videoPlayer" controls autoplay>
+    <video id="videoPlayer" autoplay>
         <source id="videoSource" src="<%= ad.src %>" type="video/mp4">
         Your browser does not support the video tag.
     </video>
+
     <script>
         const videoPlayer = document.getElementById('videoPlayer');
         const videoSource = document.getElementById('videoSource');
-        const publisherId = '<%= publisher._id %>';
-
-        const fetchNextAd = () => {
-            fetch(`/stream/${publisherId}`)
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error('Daily limit reached');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    videoSource.src = data.ad.src;
-                    videoPlayer.load();
-                })
-                .catch(error => {
-                    console.log('Playback stopped:', error.message);
-                    document.body.innerHTML = '<h1>Daily limit reached. Please try again tomorrow.</h1>';
-                });
-        };
-
-        videoPlayer.addEventListener('ended', fetchNextAd);
+        videoPlayer.addEventListener('ended', () => {
+            window.location.reload();
+        });
     </script>
 </body>
 
