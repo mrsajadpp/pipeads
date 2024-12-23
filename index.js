@@ -3,7 +3,10 @@ const cron = require('node-cron');
 const bcrypt = require('bcrypt');
 const session = require('express-session');
 const { connectDB } = require('./db');
-const { Ad, BinAd, Publisher, Advertiser } = require('./models');
+const Ad = require('./models/Ad');
+const BinAd = require('./models/BinAd');
+const Publisher = require('./models/Publisher');
+const Advertiser = require('./models/Advertiser');
 const { default: mongoose } = require('mongoose');
 const app = express();
 const port = 3001;
@@ -165,8 +168,9 @@ app.post('/publishers/signup', async (req, res) => {
 // Route to render advertiser dashboard
 app.get('/advertisers/dashboard', checkAdvertiserAuth, async (req, res) => {
     try {
-        const ads = await Ad.find({ advertiser: req.session.userId });
-        res.render('advertiser_dashboard', { ads });
+        const ads = await Ad.find({ advertiser: new mongoose.Types.ObjectId(req.session.userId) });
+        const binAds = await BinAd.find({ advertiser:  new mongoose.Types.ObjectId(req.session.userId) });
+        res.render('advertiser_dashboard', { ads, binAds });
     } catch (error) {
         res.status(500).send({ error: 'Failed to load dashboard' });
     }
@@ -182,29 +186,22 @@ app.get('/publishers/dashboard', checkPublisherAuth, async (req, res) => {
     }
 });
 
-// Route to render form for inserting ads with advertiser list
-app.get('/ads/new', checkAdvertiserAuth, async (req, res) => {
-    try {
-        const advertisers = await Advertiser.find();
-        res.render('new_ad', { advertisers });
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to load form' });
-    }
+// Route to render form for inserting ads
+app.get('/ads/new', checkAdvertiserAuth, (req, res) => {
+    res.render('new_ad');
 });
 
 // Route to insert a new ad
-app.post('/ads', async (req, res) => {
+app.post('/ads', checkAdvertiserAuth, async (req, res) => {
     try {
-        const { category, src, advertiser, start_date, end_date, per_day_budget, per_play_amount } = req.body;
+        const { category, src, start_date, end_date, per_day_budget, per_play_amount } = req.body;
+        const advertiser = req.session.userId;
 
         if (!category) {
             return res.status(400).send({ error: 'Category is required' });
         }
         if (!src) {
             return res.status(400).send({ error: 'Video Source URL is required' });
-        }
-        if (!advertiser) {
-            return res.status(400).send({ error: 'Advertiser is required' });
         }
         if (!start_date) {
             return res.status(400).send({ error: 'Start Date is required' });

@@ -18,12 +18,6 @@
     </select><br><br>
     <label for="src">Video Source URL:</label>
     <input type="text" id="src" name="src" required><br><br>
-    <label for="advertiser">Advertiser:</label>
-    <select id="advertiser" name="advertiser" required>
-      <% advertisers.forEach(advertiser => { %>
-        <option value="<%= advertiser.name %>"><%= advertiser.name %></option>
-      <% }) %>
-    </select><br><br>
     <label for="start_date">Start Date:</label>
     <input type="date" id="start_date" name="start_date" required><br><br>
     <label for="end_date">End Date:</label>
