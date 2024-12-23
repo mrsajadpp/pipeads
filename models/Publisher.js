@@ -18,10 +18,7 @@ const publisherSchema = new mongoose.Schema({
         type: String,
         required: true
     },
-    monthly_earnings: {
-        type: mongoose.Types.Decimal128,
-        default: 0.0
-    },
+    monthly_earnings: { type: Number, default: 0 },
     is_active: { type: Boolean, default: true }
 });
 
