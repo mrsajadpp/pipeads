@@ -70,7 +70,13 @@ router.post('/', checkAdvertiserAuth, async (req, res) => {
     }
 });
 
-// Route to stream video based on category and update publisher earnings
+// Helper function to check if ObjectId was created today
+function isObjectIdFromToday(objectId) {
+    const timestamp = new Date(parseInt(objectId.substring(0, 8), 16) * 1000);
+    const today = new Date();
+    return timestamp.toISOString().split('T')[0] === today.toISOString().split('T')[0];
+}
+
 router.get('/stream/:publisherId', async (req, res) => {
     const publisherId = req.params.publisherId;
     try {
@@ -84,39 +90,67 @@ router.get('/stream/:publisherId', async (req, res) => {
             return res.status(404).send({ error: 'Publisher not found' });
         }
 
+        // Find active ads with remaining budget
         const ads = await Ad.find({
             start_date: { $lte: currentDate },
             end_date: { $gte: currentDate },
-            remaining_amount: { $gte: mongoose.Types.Decimal128.fromString("0") }
+            remaining_amount: { $gt: mongoose.Types.Decimal128.fromString("0") }
         });
 
         if (!ads.length) {
             return res.status(404).send({ error: 'No ad available for streaming' });
         }
 
-        const ad = ads[Math.floor(Math.random() * ads.length)];
+        // Filter ads based on daily budget availability
+        const availableAds = ads.filter(ad => {
+            // Count plays from today using ObjectId timestamps
+            const todayPlays = ad.publisher_plays
+                .filter(play => isObjectIdFromToday(play._id.toString()))
+                .reduce((sum, play) => sum + play.daily_played, 0);
 
-        const dailyPlayLimit = ad.per_day_budget / ad.per_play_amount;
-        const totalDailyPlays = ad.publisher_plays.reduce((sum, play) => sum + play.daily_played, 0);
+            return todayPlays < ad.per_day_budget;
+        });
 
-        if (totalDailyPlays >= dailyPlayLimit) {
-            return res.status(403).send({ error: 'Daily play limit exceeded' });
+        if (!availableAds.length) {
+            return res.status(403).send({ error: 'All ads have reached their daily budget limit' });
         }
 
+        // Randomly select from available ads
+        const ad = availableAds[Math.floor(Math.random() * availableAds.length)];
+
+        // Double check daily limit using ObjectId timestamps
+        const todayPlays = ad.publisher_plays
+            .filter(play => isObjectIdFromToday(play._id.toString()))
+            .reduce((sum, play) => sum + play.daily_played, 0);
+
+        if (todayPlays >= ad.per_day_budget) {
+            return res.status(403).send({
+                error: `Daily play limit reached. Today's plays: ${todayPlays}, Limit: ${ad.per_day_budget}`
+            });
+        }
+
+        // Update ad statistics
         ad.play_count += 1;
         ad.remaining_amount -= ad.per_play_amount;
 
-        const publisherPlay = ad.publisher_plays.find(play => play.publisher.toString() === publisherId);
-        if (publisherPlay) {
-            publisherPlay.daily_played += 1;
-        } else {
-            ad.publisher_plays.push({ publisher: publisherId, daily_played: 1 });
-        }
+        // Add new play record
+        ad.publisher_plays.push({
+            publisher: publisherId,
+            daily_played: (1 * ad.per_play_amount),
+            // Note: MongoDB will automatically create an ObjectId with current timestamp
+        });
 
+        // Update publisher earnings
         publisher.monthly_earnings += ad.per_play_amount;
 
-        await ad.save();
-        await publisher.save();
+        // Save changes
+        await Promise.all([
+            ad.save(),
+            publisher.save()
+        ]);
+
+        console.log('todayPlays', todayPlays);
+        console.log('dailyPlayLimit', ad.per_day_budget);
 
         res.render('stream', { ad, publisher });
     } catch (error) {
