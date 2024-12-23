@@ -8,10 +8,10 @@ const adSchema = new mongoose.Schema({
     start_date: Date,
     end_date: Date,
     play_count: { type: Number, default: 0 },
-    daily_play_limit: { type: Number, required: true },
-    daily_played: { type: Number, default: 0 },
+    per_day_budget: { type: Number, required: true },
     amount: Number,
-    per_play_amount: { type: Number, default: 0.5 }, // Default value
+    per_play_amount: { type: Number, required: true },
+    remaining_amount: { type: Number, default: 0 },
     publisher_plays: [{
         publisher: { type: mongoose.Schema.Types.ObjectId, ref: 'Publisher' },
         daily_played: { type: Number, default: 0 }
@@ -28,10 +28,10 @@ const binAdSchema = new mongoose.Schema({
     start_date: Date,
     end_date: Date,
     play_count: { type: Number, default: 0 },
-    daily_play_limit: { type: Number, required: true },
-    daily_played: { type: Number, default: 0 },
+    per_day_budget: { type: Number, required: true },
     amount: Number,
-    per_play_amount: { type: Number, default: 0.5 }, // Default value
+    per_play_amount: { type: Number, required: true },
+    remaining_amount: { type: Number, default: 0 },
     publisher_plays: [{
         publisher: { type: mongoose.Schema.Types.ObjectId, ref: 'Publisher' },
         daily_played: { type: Number, default: 0 }

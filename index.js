@@ -73,7 +73,7 @@ app.get('/ads/new', async (req, res) => {
 // Route to insert a new ad
 app.post('/ads', async (req, res) => {
     try {
-        const { category, src, advertiser, start_date, end_date, daily_play_limit } = req.body;
+        const { category, src, advertiser, start_date, end_date, per_day_budget, per_play_amount } = req.body;
 
         if (!category) {
             return res.status(400).send({ error: 'Category is required' });
@@ -90,14 +90,17 @@ app.post('/ads', async (req, res) => {
         if (!end_date) {
             return res.status(400).send({ error: 'End Date is required' });
         }
-        if (daily_play_limit === undefined) {
-            return res.status(400).send({ error: 'Daily Play Limit is required' });
+        if (!per_day_budget) {
+            return res.status(400).send({ error: 'Per Day Budget is required' });
+        }
+        if (!per_play_amount) {
+            return res.status(400).send({ error: 'Per Play Amount is required' });
         }
 
         const dayLength = (new Date(end_date) - new Date(start_date)) / (1000 * 60 * 60 * 24);
-        const totalPlays = daily_play_limit * dayLength;
-        const amount = totalPlays * 0.5; // Assuming 0.5 INR per play
-        const per_play_amount = 0.5; // 0.5 INR per play
+        const totalPlays = per_day_budget / per_play_amount;
+        const amount = totalPlays * dayLength * per_play_amount;
+        const remaining_amount = amount;
 
         const adData = {
             category,
@@ -106,9 +109,10 @@ app.post('/ads', async (req, res) => {
             start_date,
             end_date,
             play_count: 0,
-            daily_play_limit,
+            per_day_budget,
             amount,
             per_play_amount,
+            remaining_amount,
             publisher_plays: []
         };
 
@@ -117,19 +121,6 @@ app.post('/ads', async (req, res) => {
         res.status(201).send(ad);
     } catch (error) {
         res.status(500).send({ error: 'Failed to insert ad' });
-    }
-});
-
-// Route to remove ads with an ending date and move to bin
-app.delete('/ads', async (req, res) => {
-    try {
-        const currentDate = new Date();
-        const expiredAds = await Ad.find({ end_date: { $lt: currentDate } });
-        await BinAd.insertMany(expiredAds);
-        const result = await Ad.deleteMany({ end_date: { $lt: currentDate } });
-        res.send(`Moved ${result.deletedCount} ads to bin`);
-    } catch (error) {
-        res.status(500).send({ error: 'Failed to remove ads' });
     }
 });
 
@@ -160,24 +151,14 @@ cron.schedule('0 0 * * *', async () => {
     try {
         const currentDate = new Date();
         const expiredAds = await Ad.find({ end_date: { $lt: currentDate } });
-        await BinAd.insertMany(expiredAds);
-        await Ad.deleteMany({ end_date: { $lt: currentDate } });
+        const binAds = expiredAds.map(ad => ({
+            ...ad.toObject(),
+            per_play_amount: ad.per_play_amount,
+            remaining_amount: ad.remaining_amount
+        }));
+        await BinAd.insertMany(binAds);
+        const result = await Ad.deleteMany({ end_date: { $lt: currentDate } });
         console.log('Scheduled job: Moved expired ads to bin');
-    } catch (error) {
-        console.error('Scheduled job failed:', error);
-    }
-});
-
-// Schedule job to reset daily_played and publisher_plays at 1 AM daily
-cron.schedule('0 1 * * *', async () => {
-    try {
-        await Ad.updateMany({}, {
-            $set: {
-                daily_played: 0,
-                'publisher_plays.$[].daily_played': 0
-            }
-        });
-        console.log('Scheduled job: Reset play counts to zero');
     } catch (error) {
         console.error('Scheduled job failed:', error);
     }
